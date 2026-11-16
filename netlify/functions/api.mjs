@@ -23,9 +23,11 @@ export default async (req) => {
     if (!authed(req)) return json({ error: "no" }, 401);
     const ext = (req.headers.get("x-ext") || "jpg").replace(/[^a-z0-9]/gi, "").slice(0, 5) || "jpg";
     const type = req.headers.get("content-type") || "image/jpeg";
-    if (!type.startsWith("image/")) return json({ error: "image only" }, 400);
+    if (!type.startsWith("image/") && !type.startsWith("video/")) return json({ error: "bad type" }, 400);
+    const buf = await req.arrayBuffer();
+    if (buf.byteLength > 5.5 * 1024 * 1024) return json({ error: "too big" }, 413);
     const key = crypto.randomUUID() + "." + ext;
-    await getStore("imgs").set(key, await req.arrayBuffer(), { metadata: { type } });
+    await getStore("imgs").set(key, buf, { metadata: { type } });
     return json({ url: "/i/" + key });
   }
 
@@ -33,7 +35,17 @@ export default async (req) => {
     const key = decodeURIComponent(path.slice(3));
     const r = await getStore("imgs").getWithMetadata(key, { type: "arrayBuffer" });
     if (!r) return new Response("Not found", { status: 404 });
-    return new Response(r.data, { headers: { "content-type": r.metadata?.type || "image/jpeg", "cache-control": "public, max-age=31536000, immutable" } });
+    const total = r.data.byteLength;
+    const h = { "content-type": r.metadata?.type || "application/octet-stream", "cache-control": "public, max-age=31536000, immutable", "accept-ranges": "bytes" };
+    const m = /bytes=(\d*)-(\d*)/.exec(req.headers.get("range") || "");
+    if (m && (m[1] || m[2])) {
+      let st = m[1] === "" ? total - parseInt(m[2]) : parseInt(m[1]);
+      let en = m[1] !== "" && m[2] !== "" ? parseInt(m[2]) : total - 1;
+      en = Math.min(en, total - 1); st = Math.max(st, 0);
+      if (st > en) return new Response("", { status: 416, headers: { "content-range": "bytes */" + total } });
+      return new Response(r.data.slice(st, en + 1), { status: 206, headers: { ...h, "content-range": "bytes " + st + "-" + en + "/" + total, "content-length": String(en - st + 1) } });
+    }
+    return new Response(r.data, { headers: { ...h, "content-length": String(total) } });
   }
 
   return new Response("Not found", { status: 404 });
