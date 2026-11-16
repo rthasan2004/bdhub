@@ -45,7 +45,7 @@ async function up(file,cb,msg){
  msg.textContent=' আপলোড হচ্ছে...';
  try{var ext=(file.name.split('.').pop()||'bin').toLowerCase();var buf=await file.arrayBuffer();
   var r=await fetch('/api/upload',{method:'POST',headers:{'x-admin':PW,'x-ext':ext,'content-type':file.type||'application/octet-stream'},body:buf});
-  if(!r.ok)throw 0;var j=await r.json();cb(j.url);msg.textContent=' ✔ হয়েছে';ui()}catch(e){msg.textContent=' ব্যর্থ (৪ এমবির নিচের ছবি দিন)'}}
+  if(!r.ok)throw 0;var j=await r.json();cb(j.url);msg.textContent=' ✔ হয়েছে';ui()}catch(e){msg.textContent=' ব্যর্থ (৫ এমবির নিচে হতে হবে)'}}
 function filebtn(parent,label,accept,cb){var w=el('div');var f=el('input');f.type='file';f.accept=accept;var m=el('span','mu','');f.onchange=function(){if(f.files[0])up(f.files[0],cb,m)};w.appendChild(el('span','mu',label));w.appendChild(f);w.appendChild(m);parent.appendChild(w)}
 function ui(){
  app.textContent='';var p=el('div');p.appendChild(el('h1','','⚙ অ্যাডমিন প্যানেল'));
@@ -62,7 +62,7 @@ function ui(){
  D.videos.forEach(function(v,i){var r=el('div','vrow');
   field(r,'টাইটেল',v.title,function(x){v.title=x});
   var ti=field(r,'থাম্বনেইল লিংক',v.thumb,function(x){v.thumb=x});filebtn(r,'অথবা ছবি আপলোড: ','image/*',function(u){v.thumb=u});
-  field(r,'ভিডিও লিংক (mp4 বা embed)',v.url,function(x){v.url=x});
+  field(r,'ভিডিও লিংক (mp4 বা embed)',v.url,function(x){v.url=x});filebtn(r,'অথবা ভিডিও আপলোড (৫ এমবির নিচে): ','video/*',function(u){v.url=u});
   var d=el('button','g','মুছুন');d.onclick=function(){if(confirm('মুছবেন?')){D.videos.splice(i,1);ui()}};r.appendChild(d);
   if(i>0){var u=el('button','g','↑');u.onclick=function(){D.videos.splice(i-1,2,v,D.videos[i-1]);ui()};r.appendChild(document.createTextNode(' '));r.appendChild(u)}
   p.appendChild(r)});
